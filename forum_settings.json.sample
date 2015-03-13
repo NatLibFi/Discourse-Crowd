@@ -1,0 +1,20 @@
+{
+  "authLog" : "logs/auth-%Y-%m.log",
+
+  "groupPrefix" : "cw_",
+  "groupMaxLength" : 20,
+  "groupHashLength" : 6,
+
+  "ssoSecret" : "",
+  "ssoUrl" : "",
+  "ssoCallbackUrl" : "",
+
+  "discourseUrl" : "",
+  "discourseUsername" : "",
+  "discourseKey" : "",
+
+  "crowdUsername" : "",
+  "crowdPassword" : "",
+  "crowdUrl" : "",
+  "crowdLoginUrl" : ""
+}
