@@ -2,8 +2,8 @@
   "authLog" : "logs/auth-%Y-%m.log",
 
   "groupPrefix" : "cw_",
-  "groupMaxLength" : 20,
-  "groupHashLength" : 6,
+  "groupMaxLength" : 15,
+  "groupTruncateLength" : 8,
 
   "ssoSecret" : "",
   "ssoUrl" : "",

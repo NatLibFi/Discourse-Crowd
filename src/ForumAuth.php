@@ -1,4 +1,26 @@
 <?php
+/**
+ * Single sign on authentication using Crowd.
+ *
+ * Copyright (c) 2015 University Of Helsinki (The National Library Of Finland)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @license GPL-3.0
+ * @copyright 2015 University Of Helsinki (The National Library Of Finland)
+ * @author Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
+ */
 
 namespace Finna\Auth;
 
@@ -6,13 +28,27 @@ use Finna\Auth\Crowd\CrowdApi;
 use Finna\Auth\Discourse\DiscourseApi;
 use Finna\Auth\Discourse\SingleSignOn;
 
+/**
+ * Processes Discourse Authentication requests
+ */
 class ForumAuth
 {
+    /** @var string|null Path to the authentication log file or null for none */
     private $logFile;
+
+    /** @var array Settings for the authentication handler */
     private $settings;
+
+    /** @var CrowdApi The Crowd api access */
     private $crowd;
+
+    /** @var DiscourseApi The Discourse api access */
     private $discourse;
 
+    /**
+     * Creates a new instance of ForumAuth.
+     * @param array $settings Settings for the authentication handler
+     */
     public function __construct(array $settings)
     {
         $this->logFile = empty($settings['authLog']) ? null : strftime($settings['authLog']);
@@ -25,55 +61,65 @@ class ForumAuth
         );
     }
 
-    private function query(array $params)
-    {
-        return http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-    }
-
+    /**
+     * Processes the SSO authentication request received from Discourse.
+     * @param string $sso The payload parameter received from Discourse
+     * @param string $sig The signature parameter received from the Discourse
+     * @return bool True if the user was authenticated, false if not
+     */
     public function processSsoRequest($sso, $sig)
     {
         $this->log("Received authentication request");
-
-        $payload = $this->query(['sso' => $sso, 'sig' => $sig]);
+        $payload = http_build_query(['sso' => $sso, 'sig' => $sig], '', '&', PHP_QUERY_RFC3986);
         $sso = SingleSignOn::parse($payload, $this->settings['ssoSecret']);
-        $username = $this->crowd->authenticateCookie();
 
-        if ($username !== null) {
+        // Attempt to authenticate the user using existing crowd login token
+        if ($username = $this->crowd->authenticateCookie()) {
             return $this->loginUser($username, $sso);
         }
 
-        $query = $this->query(['redirectTo' => sprintf(
+        $returnUrl = sprintf(
             '%s?%s',
             $this->settings['ssoUrl'],
-            $this->query(['ssoPayload' => base64_encode($sso->getPayload())])
-        )]);
+            http_build_query(['ssoPayload' => base64_encode($sso->getPayload())], '', '&', PHP_QUERY_RFC3986)
+        );
 
         $this->log("Redirecting to authentication portal");
+        $query = http_build_query(['redirectTo' => $returnUrl], '', '&', PHP_QUERY_RFC3986);
         header(sprintf('Location: %s?%s', $this->settings['crowdLoginUrl'], $query), true, 302);
 
         return false;
     }
 
+    /**
+     * Processes the request when returning from crowd login
+     * @param $payload The full Discourse payload returned from the crowd login
+     * @return bool True if the user was authenticated, false if not
+     */
     public function processSsoResponse($payload)
     {
         $this->log("Received authentication response");
-
         $sso = SingleSignOn::parse(base64_decode($payload), $this->settings['ssoSecret']);
-        $username = $this->crowd->authenticateCookie();
 
-        if ($username === null) {
-            $this->log("Authentication to failed");
-            return false;
+        if ($username = $this->crowd->authenticateCookie()) {
+            return $this->loginUser($username, $sso);
         }
 
-        return $this->loginUser($username, $sso);
+        $this->log("Authentication to failed");
+        return false;
     }
 
+    /**
+     * Synchronizes the logged in user with Discourse and forwards back to the forum
+     * @param string $username The username of the logged in user
+     * @param SingleSignOn $sso The SSO payload from Discourse
+     * @return bool True if the user was authenticated, false if not
+     */
     private function loginUser($username, SingleSignOn $sso)
     {
         $crowdUser = $this->crowd->getUser($username);
 
-        // Prevent privilege escalation, if the attacker knows the sso secret
+        // For security reasons, ensure that these flags are not set
         unset($sso['admin']);
         unset($sso['moderator']);
 
@@ -88,11 +134,13 @@ class ForumAuth
         $crowdGroups = $this->getCanonizedCrowdGroups($username);
         $discourseGroups = $this->getDiscourseCrowdGroups($discourseUser);
 
+        // Add user to missing groups
         foreach (array_diff($crowdGroups, $discourseGroups) as $group) {
             $this->log(sprintf("Adding user '%s' to group '%s'", $discourseUser['username'], $group));
             $this->discourse->addGroupUser($group, $discourseUser['username']);
         }
 
+        // Remove user from groups that the user does not belong to
         foreach (array_diff($discourseGroups, $crowdGroups) as $group) {
             $this->log(sprintf("Removing user '%s' from group '%s'", $discourseUser['username'], $group));
             $this->discourse->removeGroupUser($group, $discourseUser['username']);
@@ -102,34 +150,56 @@ class ForumAuth
         return true;
     }
 
+    /**
+     * Returns Crowd user groups for the user formatted to be compatible with Discourse.
+     * @param string $username Crowd username for the user
+     * @return string[] List of formatted of Crowd user group names
+     */
     private function getCanonizedCrowdGroups($username)
     {
-        return array_map([$this, 'canonizeGroupName'], $this->crowd->getUserGroups($username));
+        return array_map([$this, 'canonizeOld'], $this->crowd->getUserGroups($username));
     }
 
+    /**
+     * Formats user group name to be compatible with Discourse.
+     * @param string $name Name of the group
+     * @return string Formatted name of the group
+     */
     private function canonizeOld($name)
     {
-        $canon = substr(preg_replace("/[^A-Za-z0-9]/", "", $name), 0, 8);
+        $canon = substr(preg_replace("/[^A-Za-z0-9]/", "", $name), 0, $this->settings['groupTruncateLength']);
         $prefixed = $this->settings['groupPrefix'] . $canon;
-        $hashLength = 15 - strlen($prefixed);
+        $hashLength = $this->settings['groupMaxLength'] - strlen($prefixed);
 
         return $prefixed . substr(hash('md2', $name), 0, $hashLength);
     }
 
+    /**
+     * Formats user group name to be compatible with Discourse.
+     * @param string $name Name of the group
+     * @return string Formatted name of the group
+     */
     private function canonizeGroupName($name)
     {
         $canon = preg_replace('/[^0-9a-z_]/', '', preg_replace('/[- ]/', '_', strtolower($name)));
         $prefixed = $this->settings['groupPrefix'] . $canon;
 
         if (strlen($prefixed) > $this->settings['groupMaxLength']) {
-            $prefixed = substr($prefixed, 0, -(1 + $this->settings['groupHashLength']));
-            $hash = base_convert(md5($canon), 16, 36);
-            $prefixed .= '_' . substr($hash, 0, $this->settings['groupHashLength']);
+            $canon = substr($canon, 0, $this->settings['groupTruncateLength']);
+            $prefixed = $this->settings['groupPrefix'] . $canon;
+            $hashLength = $this->settings['groupMaxLength'] - strlen($prefixed) - 1;
+
+            return $prefixed . '_' . substr(md5($name), 0, $hashLength);
         }
 
         return $prefixed;
     }
 
+    /**
+     * Returns all Discourse user groups that are managed by the SSO login
+     * @param array $user The Discourse user data
+     * @return string[] List of managed Discourse user group names
+     */
     private function getDiscourseCrowdGroups(array $user)
     {
         $groups = [];
@@ -146,6 +216,11 @@ class ForumAuth
         });
     }
 
+    /**
+     * Writes message to the authentication log.
+     * @param string $message The message to write
+     * @return bool True if the message was written, false if not
+     */
     private function log($message)
     {
         if (!isset($this->logFile)) {
