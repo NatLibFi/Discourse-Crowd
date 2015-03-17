@@ -51,7 +51,7 @@ class DiscourseApi
     /**
      * Syncs the given SSO payload with Discourse creating or updating the user.
      * @param SingleSignOn The payload data to synchronize with Discourse
-     * @return array[] The Discourse user data
+     * @return array Discourse user information
      */
     public function syncUser(SingleSignOn $sso)
     {
@@ -68,7 +68,7 @@ class DiscourseApi
      * Adds user to a new or existing Discourse user group.
      * @param string $groupName Name of the group
      * @param string $username Name of the user to add to the group
-     * @return array[] The api response to adding user a to a group
+     * @return array The api response to adding user a to a group
      */
     public function addGroupUser($groupName, $username)
     {
@@ -80,7 +80,7 @@ class DiscourseApi
      * Removes user from a Discourse user group.
      * @param string $groupName Name of the group
      * @param string $username Name of the user to remove from the group
-     * @return array[] The api response to removing user from a group
+     * @return array The api response to removing user from a group
      */
     public function removeGroupUser($groupName, $username)
     {
@@ -99,7 +99,7 @@ class DiscourseApi
 
         if (!isset($list[$groupName])) {
             try {
-                $group = $this->client->createGroup(['name' => $groupName , 'visible' => 'false']);
+                $group = $this->client->createGroup(['name' => $groupName, 'visible' => false]);
                 $this->groupIds[$group['basic_group']['name']] = $group['basic_group']['id'];
             } catch (ClientException $exception) {
                 // 422 means the group already exists (it was probably created by a parallel request)
