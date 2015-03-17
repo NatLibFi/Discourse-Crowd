@@ -17,9 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * @license GPL-3.0
+ * @author    Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
  * @copyright 2015 University Of Helsinki (The National Library Of Finland)
- * @author Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
+ * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
 namespace Finna\Auth\Crowd;

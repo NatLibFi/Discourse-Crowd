@@ -17,29 +17,52 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * @license GPL-3.0
+ * @author    Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
  * @copyright 2015 University Of Helsinki (The National Library Of Finland)
- * @author Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
+ * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
 namespace Finna\Auth\Discourse;
 
+/**
+ * Implements Discourse single sign on payload handling.
+ *
+ * The implementation of this class is based on the official api reference
+ * implementation written in Ruby. This implementation should follow the
+ * standard PHP coding practices, but follow the Ruby implementation as close
+ * as possible.
+ *
+ * @see https://github.com/discourse/discourse_api/blob/master/lib/discourse_api/single_sign_on.rb Reference
+ */
 class SingleSignOn implements \ArrayAccess
 {
+    /** @var string[] List of allowed payload attributes */
     private static $attributes = [
         'nonce', 'name', 'username', 'email', 'avatar_url', 'avatar_force_update',
         'about_me', 'external_id', 'return_sso_url', 'admin', 'moderator',
     ];
 
+    /** @var string[] List of payload attributes that are integers */
     private static $integers = [];
+
+    /** @var string[] List of payload attributes that are booleans */
     private static $booleans = [
         'avatar_force_update', 'admin', 'moderator'
     ];
 
+    /** @var array Values for payload attributes */
     private $values;
+
+    /** @var array Custom payload attributes */
     private $customFields;
+
+    /** @var string The secret key used for signing payloads */
     private $ssoSecret;
 
+    /**
+     * Creates a new instance of SingleSignOn.
+     * @param string $secret The secret key used for signing payloads
+     */
     public function __construct($secret)
     {
         $this->ssoSecret = $secret;
@@ -47,17 +70,30 @@ class SingleSignOn implements \ArrayAccess
         $this->customFields = [];
     }
 
+    /**
+     * Returns The secret key used for signing payloads.
+     * @return string The secret key used for signing payloads
+     */
     public function getSsoSecret()
     {
         return $this->ssoSecret;
     }
 
+    /**
+     * Parses the single sign on payload and returns a new SingleSignOn instance.
+     * @param string $payload The payload string containing the 'sso' and 'sig' parameters
+     * @param string $ssoSecret The secret key used for signing payloads
+     * @return SingleSignOn New payload handler based on the given payload
+     */
     public static function parse($payload, $ssoSecret = null)
     {
         $sso = new SingleSignOn($ssoSecret);
 
         parse_str($payload, $parsed);
-        if (!isset($parsed['sso'], $parsed['sig']) || $sso->sign($parsed['sso']) !== $parsed['sig']) {
+
+        if (!isset($parsed['sso'], $parsed['sig'])) {
+            throw new \InvalidArgumentException('Bad sso payload');
+        } elseif ($sso->sign($parsed['sso']) !== $parsed['sig']) {
             throw new \RuntimeException('Bad signature for payload');
         }
 
@@ -80,8 +116,7 @@ class SingleSignOn implements \ArrayAccess
             $sso[$attribute] = $value;
         }
 
-        foreach ($decodedHash as $attribute => $value)
-        {
+        foreach ($decodedHash as $attribute => $value) {
             if (substr($attribute, 0, 7) !== 'custom.') {
                 continue;
             }
@@ -93,11 +128,20 @@ class SingleSignOn implements \ArrayAccess
         return $sso;
     }
 
+    /**
+     * Returns the signature for the payload signed using the secret key.
+     * @param string $payload Payload to sign
+     * @return string The signature for the payload
+     */
     public function sign($payload)
     {
         return hash_hmac('sha256', $payload, $this->ssoSecret);
     }
 
+    /**
+     * Returns the payload string containing the 'sso' and 'sig' parameters.
+     * @return string The signed payload string
+     */
     public function getPayload()
     {
         $payload = base64_encode($this->getUnsignedPayload());
@@ -107,6 +151,10 @@ class SingleSignOn implements \ArrayAccess
         ], '', '&', PHP_QUERY_RFC3986);
     }
 
+    /**
+     * Returns the unsigned payload parameters.
+     * @return string The unsigned payload parameters
+     */
     public function getUnsignedPayload()
     {
         $payload = [];
@@ -135,35 +183,58 @@ class SingleSignOn implements \ArrayAccess
         return http_build_query($payload, '', '&', PHP_QUERY_RFC3986);
     }
 
-
+    /**
+     * Tells if the payload parameter is set.
+     * @param string $offset name of the payload parameter
+     * @return bool True if the payload parameter is set, false if not
+     */
     public function offsetExists($offset)
     {
         $this->validateAttribute($offset);
         return $this->values[$offset] !== null;
     }
 
+    /**
+     * Returns the value for the payload parameter.
+     * @param string $offset Name of the payload parameter
+     * @return mixed Value for the payload parameter
+     */
     public function offsetGet($offset)
     {
         $this->validateAttribute($offset);
         return $this->values[$offset];
     }
 
+    /**
+     * Sets the value for the payload parameter.
+     * @param string $offset Name of the payload parameter
+     * @param mixed $value Value for the payload parameter
+     */
     public function offsetSet($offset, $value)
     {
         $this->validateAttribute($offset);
         $this->values[$offset] = $value;
     }
 
+    /**
+     * Sets value of the payload parameter to null.
+     * @param string $offset Name of the payload parameter
+     */
     public function offsetUnset($offset)
     {
         $this->validateAttribute($offset);
         $this->values[$offset] = null;
     }
 
+    /**
+     * Validates the name of the payload parameter
+     * @param string $attribute Name of the payload parameter
+     * @throws \InvalidArgumentException If the name is not a valid payload parameter
+     */
     private function validateAttribute($attribute)
     {
         if (!array_key_exists($attribute, $this->values)) {
-            throw new \RuntimeException('Invalid SSO attribute');
+            throw new \InvalidArgumentException('Invalid SSO attribute');
         }
     }
 }
