@@ -22,7 +22,7 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth\Discourse;
+namespace NatLibFi\Discourse\Discourse;
 
 /**
  * Implements Discourse single sign on payload handling.

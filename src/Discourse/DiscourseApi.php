@@ -22,7 +22,7 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth\Discourse;
+namespace NatLibFi\Discourse\Discourse;
 
 use GuzzleHttp\Exception\ClientException;
 
@@ -85,7 +85,7 @@ class DiscourseApi
     public function removeGroupUser($groupName, $username)
     {
         $groupId = $this->getGroupId($groupName);
-        return $this->client->groupRemove($groupId, $username);
+        return $this->client->groupRemove($groupId, ['username' => $username]);
     }
 
     /**

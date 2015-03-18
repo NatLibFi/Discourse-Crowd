@@ -31,7 +31,7 @@ chdir(__DIR__);
 require 'vendor/autoload.php';
 
 $settings = json_decode(file_get_contents('forum_settings.json'), true);
-$auth = new Finna\Auth\ForumAuth($settings);
+$auth = new NatLibFi\Discourse\ForumAuth($settings);
 
 try {
     if (isset($_GET['sso']) && isset($_GET['sig'])) {

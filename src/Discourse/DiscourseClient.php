@@ -22,7 +22,7 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth\Discourse;
+namespace NatLibFi\Discourse\Discourse;
 
 use GuzzleHttp\Client;
 
@@ -141,16 +141,14 @@ class DiscourseClient
     /**
      * Removes the user from the group
      * @param int $groupId The group id
-     * @param int|string $user The username or user id to remove
+     * @param array $user Array with 'username' or 'user_id' key
      * @return array The api response to removing user from a group
      */
-    public function groupRemove($groupId, $user)
+    public function groupRemove($groupId, array $user)
     {
-        $type = is_string($user) ? 'username' : 'user_id';
-
         return $this->http->delete(
             sprintf('admin/groups/%d/members.json', $groupId),
-            ['query' => [$type => $user]]
+            ['query' => $user]
         )->json();
     }
 

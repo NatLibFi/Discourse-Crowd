@@ -22,11 +22,11 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth;
+namespace NatLibFi\Discourse;
 
-use Finna\Auth\Crowd\CrowdApi;
-use Finna\Auth\Discourse\DiscourseApi;
-use Finna\Auth\Discourse\SingleSignOn;
+use NatLibFi\Discourse\Crowd\CrowdApi;
+use NatLibFi\Discourse\Discourse\DiscourseApi;
+use NatLibFi\Discourse\Discourse\SingleSignOn;
 
 /**
  * Processes Discourse Authentication requests
@@ -157,15 +157,21 @@ class ForumAuth
      */
     private function getCanonizedCrowdGroups($username)
     {
-        return array_map([$this, 'canonizeOld'], $this->crowd->getUserGroups($username));
+        $groups = $this->crowd->getUserGroups($username);
+
+        if ($this->settings['groupShortName']) {
+            return array_map([$this, 'canonizeShortName'], $groups);
+        }
+
+        return array_map([$this, 'canonizeLongName'], $groups);
     }
 
     /**
-     * Formats user group name to be compatible with Discourse.
+     * Formats group name into short string that always contains a hash.
      * @param string $name Name of the group
      * @return string Formatted name of the group
      */
-    private function canonizeOld($name)
+    private function canonizeShortName($name)
     {
         $canon = substr(preg_replace("/[^A-Za-z0-9]/", "", $name), 0, $this->settings['groupTruncateLength']);
         $prefixed = $this->settings['groupPrefix'] . $canon;
@@ -175,11 +181,11 @@ class ForumAuth
     }
 
     /**
-     * Formats user group name to be compatible with Discourse.
+     * Formats group name in to a longer string that is only truncated if necessary.
      * @param string $name Name of the group
      * @return string Formatted name of the group
      */
-    private function canonizeGroupName($name)
+    private function canonizeLongName($name)
     {
         $canon = preg_replace('/[^0-9a-z_]/', '', preg_replace('/[- ]/', '_', strtolower($name)));
         $prefixed = $this->settings['groupPrefix'] . $canon;

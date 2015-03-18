@@ -22,25 +22,47 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth\Crowd;
+namespace NatLibFi\Discourse\Crowd;
 
 use GuzzleHttp\Exception\ClientException;
 
+/**
+ * Provides convenience methods for accessing the external Crowd API.
+ */
 class CrowdApi
 {
+    /** @var CrowdClient The Crowd API client */
     private $client;
+
+    /** @var array Cookie configuration settings cache */
     private $cookieSettings;
 
+    /**
+     * Creates a new instance of CrowdApi.
+     * @param string $url Base url to the Crowd API
+     * @param string $username Username used to access the Crowd API
+     * @param string $password Password for the API user
+     */
     public function __construct($url, $username, $password)
     {
         $this->client = new CrowdClient($url, $username, $password);
     }
 
+    /**
+     * Returns the user information for the username.
+     * @param string $username Username to lookup
+     * @return array The user data
+     */
     public function getUser($username)
     {
         return $this->client->getUser($username);
     }
 
+    /**
+     * Returns the names of all the groups that the user belongs to.
+     * @param string $username Username to lookup
+     * @return string[] List of all the groups names
+     */
     public function getUserGroups($username)
     {
         $groups = $this->client->getUserNestedGroups($username);
@@ -53,6 +75,10 @@ class CrowdApi
         return $names;
     }
 
+    /**
+     * Attempts to authenticate the current request using a cookie.
+     * @return string|null Username of the logged in user or null if the user is not logged in
+     */
     public function authenticateCookie()
     {
         $settings = $this->getCookieSettings();
@@ -86,6 +112,10 @@ class CrowdApi
         return $response['user']['name'];
     }
 
+    /**
+     * Returns the cookie configuration settings used by Crowd.
+     * @return array The cookie configuration settings
+     */
     private function getCookieSettings()
     {
         if (!isset($this->cookieSettings)) {

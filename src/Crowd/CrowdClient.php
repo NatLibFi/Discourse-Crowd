@@ -22,14 +22,24 @@
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
-namespace Finna\Auth\Crowd;
+namespace NatLibFi\Discourse\Crowd;
 
 use GuzzleHttp\Client;
 
+/**
+ * Implements the Crowd API HTTP calls.
+ */
 class CrowdClient
 {
+    /** @var Client The HTTP client used to access the API */
     private $http;
 
+    /**
+     * Creates a new instance of CrowdClient.
+     * @param string $url Base url to the Crowd API
+     * @param string $username Username used to access the Crowd API
+     * @param string $password Password for the API user
+     */
     public function __construct($url, $username, $password)
     {
         $this->http = new Client([
@@ -44,16 +54,32 @@ class CrowdClient
         ]);
     }
 
+    /**
+     * Returns the Crowd user information.
+     * @param string $username Username to look up
+     * @return array The Crowd user information
+     */
     public function getUser($username)
     {
         return $this->http->get('user', ['query' => ['username' => $username]])->json();
     }
 
+    /**
+     * Returns information for all the nested groups for the user.
+     * @param string $username Username to look up
+     * @return array Information regarding all the nested groups for the user
+     */
     public function getUserNestedGroups($username)
     {
         return $this->http->get('user/group/nested', ['query' => ['username' => $username]])->json();
     }
 
+    /**
+     * Validates the session token.
+     * @param string $token Session token to validate
+     * @param array $validators List of validators
+     * @return array The validation response
+     */
     public function postSessionToken($token, array $validators)
     {
         $json = ['validationFactors' => []];
@@ -69,6 +95,10 @@ class CrowdClient
         return $this->http->post($url, ['json' => $json])->json();
     }
 
+    /**
+     * Returns the cookie configuration settings.
+     * @return array The cookie configuration settings
+     */
     public function getCookieConfig()
     {
         return $this->http->get('config/cookie')->json();

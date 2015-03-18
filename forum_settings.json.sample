@@ -4,6 +4,7 @@
   "groupPrefix" : "cw_",
   "groupMaxLength" : 15,
   "groupTruncateLength" : 8,
+  "groupShortName" : true,
 
   "ssoSecret" : "",
   "ssoUrl" : "",

@@ -15,7 +15,21 @@ The `sso_url` should point to the `auth.php` in this package. The `sso_secret`
 can be any value you choose, but it must be kept secret and it must be reflected
 in the configuration of this single sign on package.
 
+**Warning**: The authentication script makes a large number of HTTP requests to
+the Discourse API (especially if it needs to create groups and modify user
+groups). Unless the server properly configured, the authentication script may
+fail due to HTTP error 429 (Too Many Requests). This might not be a major
+problem, however, since it can usually be solved by just trying to log in again.
+
 ### Configuration ###
+
+Before running configuring the library, you need to install the library
+dependencies for the project via composer. Easiest way to do this is to run:
+
+```
+php -r "readfile('https://getcomposer.org/installer');" | php
+php composer.phar install
+```
 
 The configuration settings are read from the `forum_settings.json` file. Make
 a copy of the sample file and rename it without the 'sample' suffix. The 
@@ -28,6 +42,10 @@ settings file contains the following configuration options:
   * `groupMaxLength` is the maximum length of group names (Discourse 1.3 allows
     up to 20 characters).
   * `groupTruncateLength` is the maximum length of a truncated group name.
+  * `shortGroupName` tells whether to use shorter truncated names or longer names
+    that might not be truncated. Optimal settings for `groupMaxLength` and
+    `groupTruncateLength` for `true` are `15` and `8`. For `false`, the optimal
+    values are `20` and `10`.
     
   * `ssoSecret` must be set to the same value as `sso_secret` in the admin panel.
   * `ssoUrl` is the URL path to the `auth.php` file.
