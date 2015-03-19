@@ -50,7 +50,7 @@ class DiscourseApi
 
     /**
      * Syncs the given SSO payload with Discourse creating or updating the user.
-     * @param SingleSignOn The payload data to synchronize with Discourse
+     * @param SingleSignOn $sso The payload data to synchronize with Discourse
      * @return array Discourse user information
      */
     public function syncUser(SingleSignOn $sso)

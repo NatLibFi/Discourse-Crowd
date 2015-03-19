@@ -74,7 +74,9 @@ class ForumAuth
         $sso = SingleSignOn::parse($payload, $this->settings['ssoSecret']);
 
         // Attempt to authenticate the user using existing crowd login token
-        if ($username = $this->crowd->authenticateCookie()) {
+        $username = $this->crowd->authenticateCookie();
+
+        if ($username !== null) {
             return $this->loginUser($username, $sso);
         }
 
@@ -100,13 +102,15 @@ class ForumAuth
     {
         $this->log("Received authentication response");
         $sso = SingleSignOn::parse(base64_decode($payload), $this->settings['ssoSecret']);
+        $username = $this->crowd->authenticateCookie();
 
-        if ($username = $this->crowd->authenticateCookie()) {
-            return $this->loginUser($username, $sso);
+        if ($username === null) {
+            $this->log("Authentication to failed");
+            return false;
+
         }
 
-        $this->log("Authentication to failed");
-        return false;
+        return $this->loginUser($username, $sso);
     }
 
     /**
