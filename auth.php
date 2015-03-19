@@ -42,6 +42,15 @@ try {
         exit('Unexpected authentication request');
     }
 } catch (Exception $exception) {
+    if ($exception instanceof \GuzzleHttp\Exception\ClientException) {
+        $response = $exception->getResponse();
+
+        if ($response->getStatusCode() === 429) {
+            echo 'The server was too busy to handle your request. Please try again.';
+            throw $exception;
+        }
+    }
+
     echo
         'Error occurred during authentication. Please try again or contact ' .
         'an administrator, if the problem persists';
