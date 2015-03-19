@@ -1,7 +1,7 @@
 # Single Sign On Authentication #
 
-This package implements single sign on using the Crowd api to different web
-applications.
+This package implements single sign on authentication for Discourse forum using
+the Crowd authentication API.
 
 ## Discourse Authentication ##
 
@@ -23,8 +23,8 @@ problem, however, since it can usually be solved by just trying to log in again.
 
 ### Configuration ###
 
-Before running configuring the library, you need to install the library
-dependencies for the project via composer. Easiest way to do this is to run:
+Before configuring the library, you need to install the library dependencies
+for the project via composer. Easiest way to do this is to run:
 
 ```
 php -r "readfile('https://getcomposer.org/installer');" | php
@@ -37,7 +37,6 @@ settings file contains the following configuration options:
 
   * `authLog` contains a path that stores authentication logs. The path is
     path accepts `strftime()` tokens. Set to null to disable logging.
-    
   * `groupPrefix` is the prefix for group names imported from Crowd.
   * `groupMaxLength` is the maximum length of group names (Discourse 1.3 allows
     up to 20 characters).
@@ -46,15 +45,12 @@ settings file contains the following configuration options:
     that might not be truncated. Optimal settings for `groupMaxLength` and
     `groupTruncateLength` for `true` are `15` and `8`. For `false`, the optimal
     values are `20` and `10`.
-    
   * `ssoSecret` must be set to the same value as `sso_secret` in the admin panel.
   * `ssoUrl` is the URL path to the `auth.php` file.
   * `ssoCallbackUrl` is the URL path to the `/session/sso_login` url in Discourse.
-    
   * `discourseUrl` indicates the base URL to the discourse api.
   * `discourseUsername` is the username used by api calls (usually 'system').
   * `discourseKey` is the api key for the username.
-    
   * `crowdUsername` is the username used to authenticate to the Crowd api
   * `crowdPassword` is the password for the Crowd api user
   * `crowdUrl` is the base URL to the crowd api
