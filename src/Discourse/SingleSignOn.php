@@ -1,7 +1,6 @@
 <?php
 /**
- * Single sign on authentication using Crowd.
- *
+ * Discourse single sign on authentication using Crowd.
  * Copyright (c) 2015 University Of Helsinki (The National Library Of Finland)
  *
  * This program is free software: you can redistribute it and/or modify
