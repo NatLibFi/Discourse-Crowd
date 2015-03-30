@@ -37,6 +37,7 @@ try {
         $auth->processSsoRequest($_GET['sso'], $_GET['sig']);
     } elseif (isset($_GET['ssoPayload'])) {
         if (!$auth->processSsoResponse($_GET['ssoPayload'])) {
+            header($_SERVER["SERVER_PROTOCOL"] . ' 403 Forbidden', true, 403);
             printf('Authentication failed. %s.', $auth->getAuthenticationError());
         }
     } else {
@@ -47,11 +48,13 @@ try {
         $response = $exception->getResponse();
 
         if ($response->getStatusCode() === 429) {
+            header($_SERVER["SERVER_PROTOCOL"] . ' 503 Service Unavailable', true, 503);
             echo 'The server was too busy to handle your request. Please try again.';
             throw $exception;
         }
     }
 
+    header($_SERVER["SERVER_PROTOCOL"] . ' 500 Internal Server Error', true, 500);
     echo
         'Error occurred during authentication. Please try again or contact ' .
         'an administrator, if the problem persists';
