@@ -61,6 +61,15 @@ class ForumAuth
     }
 
     /**
+     * Returns an error message that gives reason to authentication failure.
+     * @return string Reason for authentication failure
+     */
+    public function getAuthenticationError()
+    {
+        return $this->crowd->getAuthenticationError();
+    }
+
+    /**
      * Processes the SSO authentication request received from Discourse.
      * @param string $sso The payload parameter received from Discourse
      * @param string $sig The signature parameter received from the Discourse
@@ -68,7 +77,7 @@ class ForumAuth
      */
     public function processSsoRequest($sso, $sig)
     {
-        $this->log("Received authentication request");
+        $this->log('Received authentication request');
         $payload = http_build_query(['sso' => $sso, 'sig' => $sig], '', '&', PHP_QUERY_RFC3986);
         $sso = SingleSignOn::parse($payload, $this->settings['ssoSecret']);
 
@@ -85,7 +94,7 @@ class ForumAuth
             http_build_query(['ssoPayload' => base64_encode($sso->getPayload())], '', '&', PHP_QUERY_RFC3986)
         );
 
-        $this->log("Redirecting to authentication portal");
+        $this->log('Redirecting to authentication portal');
         $query = http_build_query(['redirectTo' => $returnUrl], '', '&', PHP_QUERY_RFC3986);
         header(sprintf('Location: %s?%s', $this->settings['crowdLoginUrl'], $query), true, 302);
 
@@ -99,12 +108,12 @@ class ForumAuth
      */
     public function processSsoResponse($payload)
     {
-        $this->log("Received authentication response");
+        $this->log('Received authentication response');
         $sso = SingleSignOn::parse(base64_decode($payload), $this->settings['ssoSecret']);
         $username = $this->crowd->authenticateCookie();
 
         if ($username === null) {
-            $this->log("Authentication to failed");
+            $this->log('Authentication failed: ' . $this->crowd->getAuthenticationError());
             return false;
 
         }

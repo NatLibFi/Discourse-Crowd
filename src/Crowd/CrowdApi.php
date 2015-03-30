@@ -36,6 +36,9 @@ class CrowdApi
     /** @var array Cookie configuration settings cache */
     private $cookieSettings;
 
+    /** @var string Reason for authentication failure */
+    private $authError;
+
     /**
      * Creates a new instance of CrowdApi.
      * @param string $url Base url to the Crowd API
@@ -45,6 +48,7 @@ class CrowdApi
     public function __construct($url, $username, $password)
     {
         $this->client = new CrowdClient($url, $username, $password);
+        $this->authError = '';
     }
 
     /**
@@ -75,6 +79,15 @@ class CrowdApi
     }
 
     /**
+     * Returns the reason why the last authentication attempt failed.
+     * @return string Reason for that last authentication failure
+     */
+    public function getAuthenticationError()
+    {
+        return $this->authError;
+    }
+
+    /**
      * Attempts to authenticate the current request using a cookie.
      * @return string|null Username of the logged in user or null if the user is not logged in
      */
@@ -82,8 +95,10 @@ class CrowdApi
     {
         $settings = $this->getCookieSettings();
         $cookieName = str_replace('.', '_', $settings['name']);
+        $this->authError = '';
 
         if (!isset($_COOKIE[$cookieName])) {
+            $this->authError = 'Missing authentication cookie';
             return null;
         }
 
@@ -94,8 +109,11 @@ class CrowdApi
         } catch (ClientException $exception) {
             $response = $exception->getResponse();
 
-            // 400 means IP validation failed, 404 means expired token
-            if (in_array($response->getStatusCode(), [400, 404], true)) {
+            if ($response->getStatusCode() === 400) {
+                $this->authError = 'IP address did not match the authenticated user';
+                return null;
+            } elseif ($response->getStatusCode() === 404) {
+                $this->authError = 'Authentication token has expired';
                 return null;
             }
 

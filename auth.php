@@ -36,7 +36,9 @@ try {
     if (isset($_GET['sso']) && isset($_GET['sig'])) {
         $auth->processSsoRequest($_GET['sso'], $_GET['sig']);
     } elseif (isset($_GET['ssoPayload'])) {
-        $auth->processSsoResponse($_GET['ssoPayload']);
+        if (!$auth->processSsoResponse($_GET['ssoPayload'])) {
+            printf('Authentication failed. %s.', $auth->getAuthenticationError());
+        }
     } else {
         exit('Unexpected authentication request');
     }
