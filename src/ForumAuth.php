@@ -82,7 +82,7 @@ class ForumAuth
         if (is_writable($this->fullNamesFile)) {
             file_put_contents(
                 $this->fullNamesFile,
-                '<?php return ' . var_export($this->fullNames, true),
+                '<?php return ' . var_export($this->fullNames, true) . ';',
                 LOCK_EX
             );
         }
@@ -241,7 +241,7 @@ class ForumAuth
             ? array_map([$this, 'canonizeShortName'], $groups)
             : array_map([$this, 'canonizeLongName'], $groups);
 
-        $this->fullNames = $this->fullNames + array_combine($groups, $canonized);
+        $this->fullNames = $this->fullNames + array_combine($canonized, $groups);
 
         return $canonized;
     }
