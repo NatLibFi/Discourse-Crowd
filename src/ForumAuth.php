@@ -44,12 +44,20 @@ class ForumAuth
     /** @var DiscourseApi The Discourse api access */
     private $discourse;
 
+    /** @var string[] Full names for canonized group names */
+    private $fullNames;
+
+    /** @var string Path to the file that stores the full names cache */
+    private $fullNamesFile;
+
     /**
      * Creates a new instance of ForumAuth.
      * @param array $settings Settings for the authentication handler
      */
     public function __construct(array $settings)
     {
+        $this->fullNamesFile = __DIR__ . '/../data/full-names.php';
+        $this->fullNames = $this->loadFullNames();
         $this->logFile = empty($settings['authLog']) ? null : strftime($settings['authLog']);
         $this->settings = $settings;
         $this->crowd = new CrowdApi($settings['crowdUrl'], $settings['crowdUsername'], $settings['crowdPassword']);
@@ -58,6 +66,53 @@ class ForumAuth
             $settings['discourseUsername'],
             $settings['discourseKey']
         );
+    }
+
+    /**
+     * Writes the full names cache file on destruct.
+     */
+    public function __destruct()
+    {
+        ksort($this->fullNames);
+
+        if (!file_exists($this->fullNamesFile) && is_writable(dirname($this->fullNamesFile))) {
+            touch($this->fullNamesFile);
+        }
+
+        if (is_writable($this->fullNamesFile)) {
+            file_put_contents(
+                $this->fullNamesFile,
+                '<?php return ' . var_export($this->fullNames, true),
+                LOCK_EX
+            );
+        }
+    }
+
+    /**
+     * Loads the full names from the full names cache.
+     * @return string[] Full group names loaded from the cache
+     */
+    private function loadFullNames()
+    {
+        if (is_readable($this->fullNamesFile)) {
+            $data = include $this->fullNamesFile;
+
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Returns the full name for the canonized group name.
+     * @param string $group The canonized group name
+     * @return string The full name for the gorup
+     */
+    public function getFullName($group)
+    {
+        return isset($this->fullNames[$group]) ? $this->fullNames[$group] : '-';
     }
 
     /**
@@ -148,13 +203,25 @@ class ForumAuth
 
         // Add user to missing groups
         foreach (array_diff($crowdGroups, $discourseGroups) as $group) {
-            $this->log(sprintf("Adding user '%s' to group '%s'", $discourseUser['username'], $group));
+            $this->log(sprintf(
+                "Adding user '%s' to group '%s' (%s)",
+                $discourseUser['username'],
+                $group,
+                $this->getFullName($group)
+            ));
+
             $this->discourse->addGroupUser($group, $discourseUser['username']);
         }
 
         // Remove user from groups that the user does not belong to
         foreach (array_diff($discourseGroups, $crowdGroups) as $group) {
-            $this->log(sprintf("Removing user '%s' from group '%s'", $discourseUser['username'], $group));
+            $this->log(sprintf(
+                "Removing user '%s' from group '%s' (%s)",
+                $discourseUser['username'],
+                $group,
+                $this->getFullName($group)
+            ));
+
             $this->discourse->removeGroupUser($group, $discourseUser['username']);
         }
 
@@ -170,12 +237,13 @@ class ForumAuth
     private function getCanonizedCrowdGroups($username)
     {
         $groups = $this->crowd->getUserGroups($username);
+        $canonized = $this->settings['groupShortName']
+            ? array_map([$this, 'canonizeShortName'], $groups)
+            : array_map([$this, 'canonizeLongName'], $groups);
 
-        if ($this->settings['groupShortName']) {
-            return array_map([$this, 'canonizeShortName'], $groups);
-        }
+        $this->fullNames = $this->fullNames + array_combine($groups, $canonized);
 
-        return array_map([$this, 'canonizeLongName'], $groups);
+        return $canonized;
     }
 
     /**
