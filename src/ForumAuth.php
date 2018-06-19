@@ -193,7 +193,17 @@ class ForumAuth
         $sso['external_id'] = $username;
         $sso['email'] = $crowdUser['email'];
         $sso['username'] = $crowdUser['first-name'];
-        $sso['name'] = sprintf('%s %s', $crowdUser['first-name'], $crowdUser['last-name']);
+        // We may already have the last name in the first name, so check for that
+        $fullName = $crowdUser['first-name'];
+        $lastInFirst = strncmp(
+            strrev($crowdUser['first-name']),
+            strrev($crowdUser['last-name']),
+            strlen($crowdUser['last-name'])
+        );
+        if ($lastInFirst !== 0) {
+            $fullName .= ' ' . $crowdUser['last-name'];
+        }
+        $sso['name'] = $fullName;
 
         $discourseUser = $this->discourse->syncUser($sso);
         $this->log(sprintf("Authenticated '%s' to '%s'", $username, $discourseUser['username']));
