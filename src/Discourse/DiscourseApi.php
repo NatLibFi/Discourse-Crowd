@@ -1,7 +1,7 @@
 <?php
 /**
  * Discourse single sign on authentication using Crowd.
- * Copyright (c) 2015 University Of Helsinki (The National Library Of Finland)
+ * Copyright (c) 2015-2018 University Of Helsinki (The National Library Of Finland)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @author    Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
- * @copyright 2015 University Of Helsinki (The National Library Of Finland)
+ * @author    Ere Maijala <ere.maijala@helsinki.fi>
+ * @copyright 2015-2018 University Of Helsinki (The National Library Of Finland)
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
@@ -83,7 +84,7 @@ class DiscourseApi
      */
     public function removeGroupUser($groupName, $username)
     {
-        $groupId = $this->getGroupId($groupName);
+        $groupId = $this->client->getGroupId($groupName);
         return $this->client->groupRemove($groupId, ['username' => $username]);
     }
 
@@ -94,29 +95,22 @@ class DiscourseApi
      */
     public function getGroupId($groupName)
     {
-        $list = $this->getGroupIds();
-
-        if (!isset($list[$groupName])) {
-            try {
-                $group = $this->client->createGroup(['name' => $groupName, 'visible' => false]);
-                $this->groupIds[$group['basic_group']['name']] = $group['basic_group']['id'];
-            } catch (ClientException $exception) {
-                // 422 means the group already exists (it was probably created by a parallel request)
-                if ($exception->getResponse()->getStatusCode() !== 422) {
-                    throw $exception;
-                }
-
-                $this->groupIds = null;
+        try {
+            $id = $this->client->getGroupId($groupName);
+            if (null === $id) {
+                $id = $this->client->createGroup(['name' => $groupName, 'visible' => false]);
             }
-
-            $list = $this->getGroupIds();
+        } catch (ClientException $exception) {
+            // 422 means the group already exists (it was probably created by a parallel request)
+            if ($exception->getResponse()->getStatusCode() !== 422) {
+                throw $exception;
+            }
+            $id = $this->client->getGroupId($groupName);
+            if (null === $id) {
+                throw $exception;
+            }
         }
-
-        if (!isset($list[$groupName])) {
-            throw new \UnexpectedValueException("Failed to create a group '$groupName'");
-        }
-
-        return $list[$groupName];
+        return $id;
     }
 
     /**

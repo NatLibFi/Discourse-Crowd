@@ -1,7 +1,7 @@
 <?php
 /**
  * Discourse single sign on authentication using Crowd.
- * Copyright (c) 2015 University Of Helsinki (The National Library Of Finland)
+ * Copyright (c) 2015-2018 University Of Helsinki (The National Library Of Finland)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,13 +17,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  * @author    Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
- * @copyright 2015 University Of Helsinki (The National Library Of Finland)
+ * @author    Ere Maijala <ere.maijala@helsinki.fi>
+ * @copyright 2015-2018 University Of Helsinki (The National Library Of Finland)
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
 namespace NatLibFi\Discourse\Discourse;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 
 /**
  * Implements Discourse api client calls
@@ -75,6 +77,21 @@ class DiscourseClient
         }, $data);
     }
 
+
+    public function getGroupId($name)
+    {
+        try {
+            $res = $this->http->get('groups/' . urlencode($name) . '.json')->json();
+        } catch (ClientException $exception) {
+            // 403 probably means the group doesn't exist
+            if ($exception->getResponse()->getStatusCode() === 403) {
+                return null;
+            }
+            throw $exception;
+        }
+        return $res['group']['id'];
+    }
+
     /**
      * Creates a new group.
      *
@@ -88,14 +105,16 @@ class DiscourseClient
      */
     public function createGroup(array $args)
     {
-        $args += ['visible' => true];
-
         if (!isset($args['name'])) {
             throw new \InvalidArgumentException('Group requires a name');
         }
 
-        $args = $this->formatParameters($args);
-        return $this->http->post('admin/groups', ['json' => $args])->json();
+        $createArgs = [
+            'name' => $args['name'],
+            'visibility_level' => empty($args['visible']) ? 0 : 3
+        ];
+
+        return $this->http->post('admin/groups', ['json' => $createArgs])->json();
     }
 
     /**
@@ -104,7 +123,7 @@ class DiscourseClient
      */
     public function groups()
     {
-        return $this->http->get('admin/groups.json')->json();
+        return $this->http->get('groups.json')->json();
     }
 
     /**
@@ -177,3 +196,4 @@ class DiscourseClient
         return $this->http->post('admin/users/sync_sso', ['json' => $payload])->json();
     }
 }
+
