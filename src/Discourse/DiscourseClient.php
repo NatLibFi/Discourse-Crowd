@@ -1,7 +1,7 @@
 <?php
 /**
  * Discourse single sign on authentication using Crowd.
- * Copyright (c) 2015-2018 University Of Helsinki (The National Library Of Finland)
+ * Copyright (c) 2015-2020 University Of Helsinki (The National Library Of Finland)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
  *
  * @author    Riikka Kalliomäki <riikka.kalliomaki@helsinki.fi>
  * @author    Ere Maijala <ere.maijala@helsinki.fi>
- * @copyright 2015-2018 University Of Helsinki (The National Library Of Finland)
+ * @author    Aleksi Peebles <aleksi.peebles@helsinki.fi>
+ * @copyright 2015-2020 University Of Helsinki (The National Library Of Finland)
  * @license   https://www.gnu.org/licenses/gpl-3.0.txt GPL-3.0
  */
 
@@ -56,10 +57,8 @@ class DiscourseClient
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept'       => 'application/json',
-                ],
-                'query'   => [
-                    'api_key'      => $key,
-                    'api_username' => $username,
+                    'Api-Key'      => $key,
+                    'Api-Username' => $username,
                 ],
             ],
         ]);
