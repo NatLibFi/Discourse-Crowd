@@ -92,8 +92,10 @@ class DiscourseClient
         try {
             $res = $this->decode($this->http->get('groups/' . urlencode($name) . '.json'));
         } catch (ClientException $exception) {
-            // 403 probably means the group doesn't exist
-            if ($exception->getResponse()->getStatusCode() === 403) {
+            // 404 means the group doesn't exist (or isn't visible to the api user);
+            // 403 is kept for older Discourse versions that used it for the same case
+            $status = $exception->getResponse()->getStatusCode();
+            if ($status === 404 || $status === 403) {
                 return null;
             }
             throw $exception;
