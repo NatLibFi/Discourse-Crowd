@@ -123,7 +123,7 @@ class DiscourseClient
             'visibility_level' => empty($args['visible']) ? 0 : 3
         ];
 
-        return $this->decode($this->http->post('admin/groups', ['json' => $createArgs]));
+        return $this->decode($this->http->post('admin/groups', ['json' => ['group' => $createArgs]]));
     }
 
     /**
@@ -162,7 +162,7 @@ class DiscourseClient
         }
 
         $users = $this->formatParameters($users);
-        return $this->decode($this->http->put(sprintf('admin/groups/%d/members.json', $groupId), ['json' => $users]));
+        return $this->decode($this->http->put(sprintf('groups/%d/members.json', $groupId), ['json' => $users]));
     }
 
     /**
@@ -174,7 +174,7 @@ class DiscourseClient
     public function groupRemove($groupId, array $user)
     {
         return $this->decode($this->http->delete(
-            sprintf('admin/groups/%d/members.json', $groupId),
+            sprintf('groups/%d/members.json', $groupId),
             ['query' => $user]
         ));
     }

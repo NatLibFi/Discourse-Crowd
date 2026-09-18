@@ -98,7 +98,8 @@ class DiscourseApi
         try {
             $id = $this->client->getGroupId($groupName);
             if (null === $id) {
-                $id = $this->client->createGroup(['name' => $groupName, 'visible' => false]);
+                $group = $this->client->createGroup(['name' => $groupName, 'visible' => false]);
+                $id = $group['basic_group']['id'];
             }
         } catch (ClientException $exception) {
             // 422 means the group already exists (it was probably created by a parallel request)
