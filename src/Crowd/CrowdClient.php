@@ -42,15 +42,25 @@ class CrowdClient
     public function __construct($url, $username, $password)
     {
         $this->http = new Client([
-            'base_url' => rtrim($url, '/') . '/rest/usermanagement/1/',
-            'defaults' => [
-                'auth'    => [$username, $password],
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept'       => 'application/json',
-                ],
+            'base_uri'        => rtrim($url, '/') . '/rest/usermanagement/1/',
+            'auth'            => [$username, $password],
+            'connect_timeout' => 5,
+            'timeout'         => 15,
+            'headers'         => [
+                'Content-Type' => 'application/json',
+                'Accept'       => 'application/json',
             ],
         ]);
+    }
+
+    /**
+     * Decodes a JSON response body.
+     * @param \Psr\Http\Message\ResponseInterface $response The response to decode
+     * @return array The decoded response body
+     */
+    private function decode($response)
+    {
+        return json_decode((string) $response->getBody(), true);
     }
 
     /**
@@ -60,7 +70,7 @@ class CrowdClient
      */
     public function getUser($username)
     {
-        return $this->http->get('user', ['query' => ['username' => $username]])->json();
+        return $this->decode($this->http->get('user', ['query' => ['username' => $username]]));
     }
 
     /**
@@ -70,7 +80,7 @@ class CrowdClient
      */
     public function getUserNestedGroups($username)
     {
-        return $this->http->get('user/group/nested', ['query' => ['username' => $username]])->json();
+        return $this->decode($this->http->get('user/group/nested', ['query' => ['username' => $username]]));
     }
 
     /**
@@ -91,7 +101,7 @@ class CrowdClient
         }
 
         $url = sprintf('session/%s', urlencode($token));
-        return $this->http->post($url, ['json' => $json])->json();
+        return $this->decode($this->http->post($url, ['json' => $json]));
     }
 
     /**
@@ -100,6 +110,6 @@ class CrowdClient
      */
     public function getCookieConfig()
     {
-        return $this->http->get('config/cookie')->json();
+        return $this->decode($this->http->get('config/cookie'));
     }
 }

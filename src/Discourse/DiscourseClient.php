@@ -51,17 +51,27 @@ class DiscourseClient
     public function __construct($url, $username, $key)
     {
         $this->http = new Client([
-            'base_url' => rtrim($url, '/') . '/',
-            'defaults' => [
-                'verify'  => false,
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept'       => 'application/json',
-                    'Api-Key'      => $key,
-                    'Api-Username' => $username,
-                ],
+            'base_uri'        => rtrim($url, '/') . '/',
+            'verify'          => false,
+            'connect_timeout' => 5,
+            'timeout'         => 15,
+            'headers'         => [
+                'Content-Type' => 'application/json',
+                'Accept'       => 'application/json',
+                'Api-Key'      => $key,
+                'Api-Username' => $username,
             ],
         ]);
+    }
+
+    /**
+     * Decodes a JSON response body.
+     * @param \Psr\Http\Message\ResponseInterface $response The response to decode
+     * @return array The decoded response body
+     */
+    private function decode($response)
+    {
+        return json_decode((string) $response->getBody(), true);
     }
 
     /**
@@ -80,7 +90,7 @@ class DiscourseClient
     public function getGroupId($name)
     {
         try {
-            $res = $this->http->get('groups/' . urlencode($name) . '.json')->json();
+            $res = $this->decode($this->http->get('groups/' . urlencode($name) . '.json'));
         } catch (ClientException $exception) {
             // 403 probably means the group doesn't exist
             if ($exception->getResponse()->getStatusCode() === 403) {
@@ -113,7 +123,7 @@ class DiscourseClient
             'visibility_level' => empty($args['visible']) ? 0 : 3
         ];
 
-        return $this->http->post('admin/groups', ['json' => $createArgs])->json();
+        return $this->decode($this->http->post('admin/groups', ['json' => $createArgs]));
     }
 
     /**
@@ -122,7 +132,7 @@ class DiscourseClient
      */
     public function groups()
     {
-        return $this->http->get('groups.json')->json();
+        return $this->decode($this->http->get('groups.json'));
     }
 
     /**
@@ -152,7 +162,7 @@ class DiscourseClient
         }
 
         $users = $this->formatParameters($users);
-        return $this->http->put(sprintf('admin/groups/%d/members.json', $groupId), ['json' => $users])->json();
+        return $this->decode($this->http->put(sprintf('admin/groups/%d/members.json', $groupId), ['json' => $users]));
     }
 
     /**
@@ -163,10 +173,10 @@ class DiscourseClient
      */
     public function groupRemove($groupId, array $user)
     {
-        return $this->http->delete(
+        return $this->decode($this->http->delete(
             sprintf('admin/groups/%d/members.json', $groupId),
             ['query' => $user]
-        )->json();
+        ));
     }
 
     /**
@@ -192,7 +202,7 @@ class DiscourseClient
         parse_str($sso->getPayload(), $payload);
 
         $payload = $this->formatParameters($payload);
-        return $this->http->post('admin/users/sync_sso', ['json' => $payload])->json();
+        return $this->decode($this->http->post('admin/users/sync_sso', ['json' => $payload]));
     }
 }
 
